@@ -7,8 +7,8 @@
     <ProjectGuid>{3AFF460B-0963-406C-8A57-29D9323BD206}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Telegram.Bot.Echo</RootNamespace>
-    <AssemblyName>Telegram.Bot.Echo</AssemblyName>
+    <RootNamespace>NeebsBot</RootNamespace>
+    <AssemblyName>NeebsBot</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>

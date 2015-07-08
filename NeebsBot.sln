@@ -12,7 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{E3482D
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Telegram.Bot.Echo", "Telegram.Bot.Echo\Telegram.Bot.Echo.csproj", "{3AFF460B-0963-406C-8A57-29D9323BD206}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeebsBot", "Telegram.Bot.Echo\NeebsBot.csproj", "{3AFF460B-0963-406C-8A57-29D9323BD206}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

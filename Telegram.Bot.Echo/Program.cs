@@ -7,10 +7,11 @@ using System.Threading.Tasks;
 using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 using File = System.IO.File;
 
-namespace Telegram.Bot.Echo
+namespace NeebsBot
 {
     class Program
     {
