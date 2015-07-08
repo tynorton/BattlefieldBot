@@ -5,7 +5,7 @@ Monitors Neebs Gaming (https://www.youtube.com/user/NeebsGaming) for new videos,
 
 ## Directions
 
-* Create a bot with Telegram using BotFather: https://core.telegram.org/bots#botfather
+* Install Telegram (https://telegram.org/), and create a bot by messaging @BotFather: https://core.telegram.org/bots#botfather
 * Register for a google api token @ https://console.developers.google.com
 
 Edit HiddenSetting.config, and add your telegram bot API token, and google developer api information.
