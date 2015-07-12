@@ -4,14 +4,11 @@ using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Google.Apis.Services;
-using Google.Apis.YouTube.v3;
-using Google.Apis.YouTube.v3.Data;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using File = System.IO.File;
 
-namespace NeebsBot
+namespace BattlefieldBot
 {
     class Program
     {
@@ -19,11 +16,11 @@ namespace NeebsBot
 
         static void Main(string[] args)
         {
-            var timer = new System.Threading.Timer(
+            /*var timer = new System.Threading.Timer(
                 e => RunYoutubeSearch().Wait(),
                 null,
                 TimeSpan.FromSeconds(5),
-                TimeSpan.FromMinutes(5));
+                TimeSpan.FromMinutes(5));*/
 
             Run().Wait();
         }
@@ -90,54 +87,7 @@ namespace NeebsBot
             }
         }
 
-        private static async Task RunYoutubeSearch()
-        {
-            Console.Write("Searching YouTube for new videos... ");
-            YouTubeService youtube = new YouTubeService(new BaseClientService.Initializer()
-            {
-                ApplicationName = ConfigurationManager.AppSettings["YoutubeApiAppName"],
-                ApiKey = ConfigurationManager.AppSettings["YoutubeApiToken"]
-            });
-
-            SearchResource.ListRequest listRequest = youtube.Search.List("snippet");
-            listRequest.ChannelId = ConfigurationManager.AppSettings["YoutubeChannelId"]; 
-            listRequest.MaxResults = 5;
-            listRequest.Order = SearchResource.ListRequest.OrderEnum.Date;
-            listRequest.Type = "video";
-            SearchListResponse resp = listRequest.Execute();
-
-            DateTime mostRecent = DateTime.MinValue.ToUniversalTime();
-
-            var youtubeRootDir = Path.Combine(Environment.CurrentDirectory, string.Format("data/youtube/"));
-            var channelSubscribersPath = Path.Combine(youtubeRootDir, string.Format("{0}.txt", listRequest.ChannelId));
-
-            CreateIfMissing(Path.Combine(Environment.CurrentDirectory, string.Format("data/youtube/")));
-
-            if (File.Exists(channelSubscribersPath))
-            {
-                var dateStr = File.ReadAllText(channelSubscribersPath);
-                long ticks = long.Parse(dateStr);
-                mostRecent = DateTime.SpecifyKind(new DateTime(ticks), DateTimeKind.Utc);
-            }
-
-            Console.WriteLine("Done.");
-
-            var newItems =
-                resp.Items.Where(obj => obj.Snippet.PublishedAt.HasValue && obj.Snippet.PublishedAt.Value > mostRecent)
-                    .ToList();
-
-            if (newItems.Any())
-            {
-                Console.WriteLine("Found New Videos! Notifying clients.");
-                File.WriteAllText(channelSubscribersPath,
-                    newItems.OrderByDescending(obj => obj.Snippet.PublishedAt.Value)
-                        .FirstOrDefault()
-                        .Snippet.PublishedAt.Value.Ticks.ToString());
-                await NotifyChats(newItems);
-            }
-        }
-
-        private static async Task NotifyChats(List<SearchResult> newItems)
+        private static async Task NotifyChats(List<dynamic> newItems)
         {
             List<int> chatIds = new List<int>();
             if (File.Exists(Path.Combine(Environment.CurrentDirectory, "subscribedchats.txt")))
