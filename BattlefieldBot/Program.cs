@@ -16,11 +16,11 @@ namespace BattlefieldBot
 
         static void Main(string[] args)
         {
-            /*var timer = new System.Threading.Timer(
-                e => RunYoutubeSearch().Wait(),
+            var timer = new System.Threading.Timer(
+                e => RunBattlelogSearchAsync().Wait(),
                 null,
                 TimeSpan.FromSeconds(5),
-                TimeSpan.FromMinutes(5));*/
+                TimeSpan.FromMinutes(5));
 
             Run().Wait();
         }
@@ -53,7 +53,7 @@ namespace BattlefieldBot
                     }
 
                     // User Chats
-                    if (update.Message.Chat.GetType() == typeof (User))
+                    if (update.Message.Chat.GetType() == typeof(User))
                     {
                         var user = update.Message.Chat as User;
                         if (update.Message.Text.Trim().Equals("subscribe", StringComparison.OrdinalIgnoreCase) && !chatIds.Contains(update.Message.Chat.Id))
@@ -89,20 +89,28 @@ namespace BattlefieldBot
 
         private static async Task NotifyChats(List<dynamic> newItems)
         {
-            List<int> chatIds = new List<int>();
-            if (File.Exists(Path.Combine(Environment.CurrentDirectory, "subscribedchats.txt")))
+            try
             {
-                chatIds = File.ReadAllText(Path.Combine(Environment.CurrentDirectory, "subscribedchats.txt")).Split(',').Select(int.Parse).ToList();
-            }
-
-            foreach (var chatId in chatIds)
-            {
-                Console.WriteLine("Notiyfing Chat ID: {0}", chatId);
-                foreach (var result in newItems)
+                var chatIds = new List<int>();
+                if (File.Exists(Path.Combine(Environment.CurrentDirectory, "subscribedchats.txt")))
                 {
-                    Console.WriteLine(" * New video: https://www.youtube.com/watch?v={0}", result.Id.VideoId);
-                    await Bot.SendTextMessage(chatId, string.Format("New Neebs Gaming Video!\n\nhttps://www.youtube.com/watch?v={0}", result.Id.VideoId));
+                    chatIds = File.ReadAllText(Path.Combine(Environment.CurrentDirectory, "subscribedchats.txt")).Split(',').Select(int.Parse).ToList();
                 }
+
+                foreach (var chatId in chatIds)
+                {
+                    Console.WriteLine("Notiyfing Chat ID: {0}", chatId);
+                    foreach (var result in newItems)
+                    {
+                        Console.WriteLine(" * New video: https://www.youtube.com/watch?v={0}", result.Id.VideoId);
+                        await Bot.SendTextMessage(chatId, string.Format("New Neebs Gaming Video!\n\nhttps://www.youtube.com/watch?v={0}", result.Id.VideoId));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // No nothing, just don't crash the app if service is down, or some unknown error.
+                Console.WriteLine(ex.ToString());
             }
         }
 
@@ -113,6 +121,37 @@ namespace BattlefieldBot
             {
                 Directory.CreateDirectory(path);
             }
+        }
+
+        public static async Task RunBattlelogSearchAsync()
+        {
+            var client = new BattlelogApiClient();
+
+            // Autenticate User
+            client.Login(ConfigurationManager.AppSettings["BattlelogUserName"], ConfigurationManager.AppSettings["BattlelogPassword"]);
+
+            // TODO respect includeSelf from app settings
+            var users = client.GetComCenterStatuses(true);
+
+            if (null == users)
+            {
+                Console.WriteLine("No Users Found!");
+                return;
+            }
+
+            foreach (var user in users)
+            {
+                Console.Write("Current User: " + user.UserName);
+                Console.Write(" [" + ((user.IsOnline) ? "Online]" : "Offline]"));
+                if (user.IsOnline && user.IsPlaying)
+                {
+                    Console.Write(", playing {0} on {1}", BattlelogApiClient.GetGameName(user.ServerDetail.GameType), user.ServerDetail.Name);
+                }
+
+                Console.WriteLine();
+            }
+
+            Console.Read();
         }
     }
 }
