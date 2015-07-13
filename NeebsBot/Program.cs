@@ -23,7 +23,7 @@ namespace NeebsBot
                 e => RunYoutubeSearch().Wait(),
                 null,
                 TimeSpan.FromSeconds(5),
-                TimeSpan.FromMinutes(5));
+                TimeSpan.FromMinutes(15));
 
             Run().Wait();
         }
@@ -92,67 +92,87 @@ namespace NeebsBot
 
         private static async Task RunYoutubeSearch()
         {
-            Console.Write("Searching YouTube for new videos... ");
-            YouTubeService youtube = new YouTubeService(new BaseClientService.Initializer()
+            try
             {
-                ApplicationName = ConfigurationManager.AppSettings["YoutubeApiAppName"],
-                ApiKey = ConfigurationManager.AppSettings["YoutubeApiToken"]
-            });
+                Console.Write("Searching YouTube for new videos... ");
+                var youtube = new YouTubeService(new BaseClientService.Initializer()
+                {
+                    ApplicationName = ConfigurationManager.AppSettings["YoutubeApiAppName"],
+                    ApiKey = ConfigurationManager.AppSettings["YoutubeApiToken"]
+                });
 
-            SearchResource.ListRequest listRequest = youtube.Search.List("snippet");
-            listRequest.ChannelId = ConfigurationManager.AppSettings["YoutubeChannelId"]; 
-            listRequest.MaxResults = 5;
-            listRequest.Order = SearchResource.ListRequest.OrderEnum.Date;
-            listRequest.Type = "video";
-            SearchListResponse resp = listRequest.Execute();
+                SearchResource.ListRequest listRequest = youtube.Search.List("snippet");
+                listRequest.ChannelId = ConfigurationManager.AppSettings["YoutubeChannelId"];
+                listRequest.MaxResults = 5;
+                listRequest.Order = SearchResource.ListRequest.OrderEnum.Date;
+                listRequest.Type = "video";
+                SearchListResponse resp = listRequest.Execute();
 
-            DateTime mostRecent = DateTime.MinValue.ToUniversalTime();
+                DateTime mostRecent = DateTime.MinValue.ToUniversalTime();
 
-            var youtubeRootDir = Path.Combine(Environment.CurrentDirectory, string.Format("data/youtube/"));
-            var channelSubscribersPath = Path.Combine(youtubeRootDir, string.Format("{0}.txt", listRequest.ChannelId));
+                var youtubeRootDir = Path.Combine(Environment.CurrentDirectory, string.Format("data/youtube/"));
+                var channelSubscribersPath = Path.Combine(youtubeRootDir,
+                    string.Format("{0}.txt", listRequest.ChannelId));
 
-            CreateIfMissing(Path.Combine(Environment.CurrentDirectory, string.Format("data/youtube/")));
+                CreateIfMissing(Path.Combine(Environment.CurrentDirectory, string.Format("data/youtube/")));
 
-            if (File.Exists(channelSubscribersPath))
-            {
-                var dateStr = File.ReadAllText(channelSubscribersPath);
-                long ticks = long.Parse(dateStr);
-                mostRecent = DateTime.SpecifyKind(new DateTime(ticks), DateTimeKind.Utc);
+                if (File.Exists(channelSubscribersPath))
+                {
+                    var dateStr = File.ReadAllText(channelSubscribersPath);
+                    long ticks = long.Parse(dateStr);
+                    mostRecent = DateTime.SpecifyKind(new DateTime(ticks), DateTimeKind.Utc);
+                }
+
+                Console.WriteLine("Done.");
+
+                var newItems =
+                    resp.Items.Where(
+                        obj => obj.Snippet.PublishedAt.HasValue && obj.Snippet.PublishedAt.Value > mostRecent)
+                        .ToList();
+
+                if (newItems.Any())
+                {
+                    Console.WriteLine("Found New Videos! Notifying clients.");
+                    var latestEp = newItems.OrderByDescending(obj => obj.Snippet.PublishedAt.Value)
+                        .FirstOrDefault();
+                    File.WriteAllText(channelSubscribersPath, latestEp.Snippet.PublishedAt.Value.Ticks.ToString());
+                    await NotifyChats(newItems);
+                }
             }
-
-            Console.WriteLine("Done.");
-
-            var newItems =
-                resp.Items.Where(obj => obj.Snippet.PublishedAt.HasValue && obj.Snippet.PublishedAt.Value > mostRecent)
-                    .ToList();
-
-            if (newItems.Any())
+            catch (Exception ex)
             {
-                Console.WriteLine("Found New Videos! Notifying clients.");
-                File.WriteAllText(channelSubscribersPath,
-                    newItems.OrderByDescending(obj => obj.Snippet.PublishedAt.Value)
-                        .FirstOrDefault()
-                        .Snippet.PublishedAt.Value.Ticks.ToString());
-                await NotifyChats(newItems);
+                // No nothing, just don't crash the app if service is down, or some unknown error.
+                Console.WriteLine(ex.ToString());
             }
         }
 
         private static async Task NotifyChats(List<SearchResult> newItems)
         {
-            List<int> chatIds = new List<int>();
-            if (File.Exists(Path.Combine(Environment.CurrentDirectory, "subscribedchats.txt")))
+            try
             {
-                chatIds = File.ReadAllText(Path.Combine(Environment.CurrentDirectory, "subscribedchats.txt")).Split(',').Select(int.Parse).ToList();
-            }
-
-            foreach (var chatId in chatIds)
-            {
-                Console.WriteLine("Notiyfing Chat ID: {0}", chatId);
-                foreach (var result in newItems)
+                var chatIds = new List<int>();
+                if (File.Exists(Path.Combine(Environment.CurrentDirectory, "subscribedchats.txt")))
                 {
-                    Console.WriteLine(" * New video: https://www.youtube.com/watch?v={0}", result.Id.VideoId);
-                    await Bot.SendTextMessage(chatId, string.Format("New Neebs Gaming Video!\n\nhttps://www.youtube.com/watch?v={0}", result.Id.VideoId));
+                    chatIds = File.ReadAllText(Path.Combine(Environment.CurrentDirectory, "subscribedchats.txt"))
+                        .Split(',')
+                        .Select(int.Parse)
+                        .ToList();
                 }
+
+                foreach (var chatId in chatIds)
+                {
+                    Console.WriteLine("Notiyfing Chat ID: {0}", chatId);
+                    foreach (var result in newItems)
+                    {
+                        Console.WriteLine(" * New video: https://www.youtube.com/watch?v={0}", result.Id.VideoId);
+                        await Bot.SendTextMessage(chatId, string.Format("New Neebs Gaming Video!\n\nhttps://www.youtube.com/watch?v={0}", result.Id.VideoId));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // No nothing, just don't crash the app if service is down, or some unknown error happens.
+                Console.WriteLine(ex.ToString());
             }
         }
 
