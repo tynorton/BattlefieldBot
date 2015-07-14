@@ -1,6 +1,4 @@
-﻿using BattlefieldBot.BattlelogModel;
-
-namespace BattlefieldBot.BattlelogModel
+﻿namespace BattlefieldBot.Battlelog.Proxies
 {
     internal class bl_user
     {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Net;
-using BattlefieldBot.BattlelogModel;
+using BattlefieldBot.Battlelog.Proxies;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 

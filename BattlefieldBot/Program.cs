@@ -4,6 +4,7 @@ using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using SQLite;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using File = System.IO.File;
@@ -139,14 +140,29 @@ namespace BattlefieldBot
                 return;
             }
 
+            // Save found users
+            foreach (var user in users)
+            {
+                using (var db = new SQLiteConnection("App.sqlite"))
+                {
+                    var allUsers = db.Table<BattlelogUser>().ToList();
+                    if (!allUsers.Any(obj => obj.UserName == user.UserName))
+                    {
+                        db.Insert(user);
+                    }
+                }
+            }
+
             foreach (var user in users)
             {
                 Console.Write("Current User: " + user.UserName);
                 Console.Write(" [" + ((user.IsOnline) ? "Online]" : "Offline]"));
+
+                /*
                 if (user.IsOnline && user.IsPlaying)
                 {
-                    Console.Write(", playing {0} on {1}", BattlelogApiClient.GetGameName(user.ServerDetail.GameType), user.ServerDetail.Name);
-                }
+                    Console.Write(", playing {0} on {1}", BattlelogApiClient.GetGameName(user.Server.GameType), user.Server.Name);
+                }*/
 
                 Console.WriteLine();
             }

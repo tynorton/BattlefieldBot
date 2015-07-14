@@ -1,4 +1,4 @@
-﻿namespace BattlefieldBot.BattlelogModel
+﻿namespace BattlefieldBot.Battlelog.Proxies
 {
     internal class bl_user_persona
     {

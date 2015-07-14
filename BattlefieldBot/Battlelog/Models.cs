@@ -1,5 +1,7 @@
 ﻿using System;
-using BattlefieldBot.BattlelogModel;
+using System.ComponentModel.DataAnnotations;
+using BattlefieldBot.Battlelog.Proxies;
+using SQLite;
 
 namespace BattlefieldBot
 {
@@ -23,29 +25,45 @@ namespace BattlefieldBot
 
     public class BattlelogUser
     {
+        [Obsolete]
+        public BattlelogUser() { }
+
         internal BattlelogUser(bl_user user)
         {
+            this.UserID = user.userId;
             this.UserName = user.username;
             this.IsOnline = user.presence.isOnline;
             this.IsPlaying = user.presence.isPlaying;
-            this.ServerDetail = new ServerDetail(user.presence);
+            this.ServerID = user.presence.serverGuid.ToString();
             this.GameType = (GamePlatformType) user.presence.game;
         }
 
-        public string UserName { get; set; }
-        public bool IsOnline { get; set; }
-        public bool IsPlaying { get; set; }
-        public GamePlatformType GameType { get; set; }
-        public ServerDetail ServerDetail { get; set; }
+        [Key]
+        public long UserID { get; set; }
 
+        public string UserName { get; set; }
+
+        public bool IsOnline { get; set; }
+
+        public bool IsPlaying { get; set; }
+
+        public GamePlatformType GameType { get; set; }
+
+        public string ServerID { get; set; }
+
+        [Ignore]
+        public virtual ServerDetail Server { get; private set; }
     }
 
     public class ServerDetail
     {
+        [Obsolete]
+        public ServerDetail() { }
+
         public ServerDetail(string serverName, Guid serverGuid, GameType type, GamePlatformType platform)
         {
             this.Name = serverName;
-            this.ID = serverGuid;
+            this.ServerID = serverGuid.ToString();
             this.GameType = type;
             this.Platform = platform;
         }
@@ -53,14 +71,18 @@ namespace BattlefieldBot
         internal ServerDetail(bl_user_presence presence)
         {
             this.Name = presence.serverName;
-            this.ID = presence.serverGuid;
+            this.ServerID = presence.serverGuid.ToString();
             this.GameType = (GameType) presence.game;
             this.Platform = (GamePlatformType) presence.platform;
         }
 
         public string Name { get; set; }
-        public Guid ID { get; set; }
+
+        [Key]
+        public string ServerID { get; set; }
+
         public GameType GameType { get; set; }
+
         public GamePlatformType Platform { get; set; }
     }
 }
