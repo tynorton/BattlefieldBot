@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using BattlefieldBot.Battlelog.Proxies;
 using LiteDB;
@@ -8,19 +7,20 @@ namespace BattlefieldBot
 {
     public enum GameType
     {
+        Unknown = 0, // XB1 showed this
         Battlefield3 = 2,
-        Battlefield4 = 2048,
+        Battlefield4 = 2048
         // BattlefieldHardline = ??
         // MOH = ??
-        Unknown = int.MaxValue
     }
 
     public enum GamePlatformType
     {
+        Unknown = 0, // XB1 showed this
         PC = 1,
         Xbox360 = 2,
-        PlayStation3 = 3
-        // XboxOne = ?
+        // ? PlayStation3 = 3,
+        XboxOne = 64
         // PlayStation4 = ?
     }
 
@@ -35,10 +35,14 @@ namespace BattlefieldBot
             this.UserName = user.username;
             this.IsOnline = user.presence.isOnline;
             this.IsPlaying = user.presence.isPlaying;
-            this.ServerID = user.presence.serverGuid.ToString();
-            this.GameType = (GamePlatformType) user.presence.game;
+            this.ServerID = null != user.presence.playingMp ? user.presence.playingMp.serverGuid.ToString() : user.presence.serverGuid.ToString();
+            this.ServerName = null != user.presence.playingMp ? user.presence.playingMp.serverName : user.presence.serverName;
+            this.GameType = null != user.presence.onlineGame ? user.presence.onlineGame.game : user.presence.game;
+            this.Platform = null != user.presence.onlineGame ? user.presence.onlineGame.platform : user.presence.platform;
             this.LastUpdated = DateTime.UtcNow;
         }
+
+        public object ServerName { get; set; }
 
         [BsonId]
         public long UserID { get; set; }
@@ -49,7 +53,7 @@ namespace BattlefieldBot
 
         public bool IsPlaying { get; set; }
 
-        public GamePlatformType GameType { get; set; }
+        public GameType GameType { get; set; }
 
         public string ServerID { get; set; }
 
@@ -58,6 +62,12 @@ namespace BattlefieldBot
 
         public DateTime LastUpdated { get; set; }
         public DateTime LastSeen { get; set; }
+        public GamePlatformType Platform { get; set; }
+
+        public override string ToString()
+        {
+            return this.UserName;
+        }
     }
 
     public class ServerDetail
@@ -77,8 +87,8 @@ namespace BattlefieldBot
         {
             this.Name = presence.serverName;
             this.ServerID = presence.serverGuid.ToString();
-            this.GameType = (GameType) presence.game;
-            this.Platform = (GamePlatformType) presence.platform;
+            this.GameType = presence.game;
+            this.Platform = presence.platform;
         }
 
         public string Name { get; set; }
@@ -89,5 +99,10 @@ namespace BattlefieldBot
         public GameType GameType { get; set; }
 
         public GamePlatformType Platform { get; set; }
+
+        public override string ToString()
+        {
+            return this.Name;
+        }
     }
 }

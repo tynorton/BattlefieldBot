@@ -35,7 +35,13 @@ namespace BattlefieldBot
                         ? "never"
                         : StringFunctions.GetAgeString(user.LastSeen.ToUniversalTime());
 
-                    Console.Write(" * {0} [Last seen {1}]", user.UserName, lastSeenStr);
+                    Console.Write(" * {0} [Last seen {1} playing {2} ({3}) on {4} ({5})]",
+                        user.UserName,
+                        lastSeenStr,
+                        BattlelogApiClient.GetGameName(user.GameType),
+                        user.Platform,
+                        user.ServerName,
+                        BattlelogApiClient.GetGameUrl(user.GameType, user.Platform, user.ServerID));
 
                     /*
                     if (user.IsOnline && user.IsPlaying)
@@ -53,7 +59,7 @@ namespace BattlefieldBot
                 null,
                 TimeSpan.FromSeconds(5),
                 TimeSpan.FromMinutes(5));
-            
+
             // Start main loop
             Run().Wait();
         }
@@ -70,8 +76,8 @@ namespace BattlefieldBot
 
             while (true)
             {
-                try 
-                { 
+                try
+                {
                     var updates = await Bot.GetUpdates(offset);
                     bool changed = false;
                     foreach (var update in updates)
@@ -121,7 +127,7 @@ namespace BattlefieldBot
                     await Task.Delay(1000);
                 }
                 catch (Exception ex)
-                { 
+                {
                     // Don't crash the loop, just print error
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine(ex.ToString());
@@ -130,7 +136,7 @@ namespace BattlefieldBot
             }
         }
 
-        private static async Task NotifyChats(List<dynamic> newItems)
+        private static async Task NotifyChats(string msg)
         {
             try
             {
@@ -142,12 +148,8 @@ namespace BattlefieldBot
 
                 foreach (var chatId in chatIds)
                 {
-                    Console.WriteLine("Notiyfing Chat ID: {0}", chatId);
-                    foreach (var result in newItems)
-                    {
-                        Console.WriteLine(" * New video: https://www.youtube.com/watch?v={0}", result.Id.VideoId);
-                        await Bot.SendTextMessage(chatId, string.Format("New Neebs Gaming Video!\n\nhttps://www.youtube.com/watch?v={0}", result.Id.VideoId));
-                    }
+                    Console.WriteLine("[{0} - Broadcast] {1}", DateTime.UtcNow.ToShortTimeString(), msg);
+                    await Bot.SendTextMessage(chatId, msg);
                 }
             }
             catch (Exception ex)
@@ -170,6 +172,16 @@ namespace BattlefieldBot
         {
             var client = new BattlelogApiClient();
 
+            LiteCollection<BattlelogUser> userDocs;
+            IList<BattlelogUser> storedUsers;
+
+            // Can't get user list, let's just load up our last known users list and hope for the best
+            using (var db = new LiteDatabase(AppContext.SQLITE_FILENAME))
+            {
+                userDocs = db.GetCollection<BattlelogUser>("users");
+                storedUsers = userDocs.FindAll().ToList();
+            }
+
             // Autenticate User
             client.Login(ConfigurationManager.AppSettings["BattlelogUserName"],
                 ConfigurationManager.AppSettings["BattlelogPassword"]);
@@ -177,19 +189,9 @@ namespace BattlefieldBot
             string includeSelfStr = ConfigurationManager.AppSettings["MonitorCurrentUser"];
 
             // Download ComCenter Statuses
-            var users = client.GetComCenterStatuses(!string.IsNullOrEmpty(includeSelfStr) && bool.Parse(includeSelfStr));
-            if (null == users)
-            {
-                LiteCollection<BattlelogUser> userDocs;
-
-                // Can't get user list, let's just load up our last known users list and hope for the best
-                using (var db = new LiteDatabase(AppContext.SQLITE_FILENAME))
-                {
-                    userDocs = db.GetCollection<BattlelogUser>("users");
-                }
-
-                users = userDocs.FindAll();
-            }
+            var users =
+                client.GetComCenterStatuses(!string.IsNullOrEmpty(includeSelfStr) && bool.Parse(includeSelfStr)) ??
+                storedUsers;
 
             using (var db = new LiteDatabase(AppContext.SQLITE_FILENAME))
             {
@@ -221,19 +223,44 @@ namespace BattlefieldBot
                         if (isPlayingStatusUpdated)
                         {
                             showSavingMsg = true;
-                            var newServer = (matchingUser.ServerID != user.ServerID) ? user.Server : null;
-                            if (null != newServer)
+                            if (user.IsPlaying && matchingUser.IsPlaying && (matchingUser.ServerID != user.ServerID))
                             {
                                 // User has changed server since last update
-                                Console.Write("[{0}] {1} has changed servers, and is now playing {2} on {3} ({4})",
-                                    DateTime.UtcNow.ToShortTimeString(), user.UserName,
-                                    BattlelogApiClient.GetGameName(newServer.GameType), newServer.Name,
-                                    BattlelogApiClient.GetGameUrl(newServer.GameType, newServer.ServerID));
+                                await NotifyChats(
+                                    string.Format("{0} has changed servers, and is now playing {1} ({2}) on {3} ({4})",
+                                        user.UserName,
+                                        BattlelogApiClient.GetGameName(user.GameType),
+                                        user.Platform,
+                                        user.ServerName,
+                                        BattlelogApiClient.GetGameUrl(user.GameType, user.Platform, user.ServerID)));
+                            }
+                            else if (user.IsPlaying && !matchingUser.IsPlaying)
+                            {
+                                await NotifyChats(
+                                    string.Format("{0} has started playing {1} ({2}) on {3} ({4})",
+                                        user.UserName,
+                                        BattlelogApiClient.GetGameName(user.GameType),
+                                        user.Platform,
+                                        user.ServerName,
+                                        BattlelogApiClient.GetGameUrl(user.GameType, user.Platform, user.ServerID)));
+                            }
+                            else if (!user.IsPlaying && matchingUser.IsPlaying)
+                            {
+                                await NotifyChats(
+                                    string.Format("{0} has stopped playing {1} ({2})",
+                                        user.UserName,
+                                        BattlelogApiClient.GetGameName(user.GameType),
+                                        user.Platform));
                             }
                         }
 
                         // Delete stale record
                         userRepo.Delete(obj => obj.UserID == user.UserID);
+                    }
+                    else
+                    {
+                        Console.WriteLine("[{0}] {1} {2}", DateTime.UtcNow.ToShortTimeString(), user.UserName,
+                            users.Any() ? "has accepted your friend request" : "discovered as friend");
                     }
 
                     // Insert user record

@@ -78,14 +78,23 @@ namespace BattlefieldBot
             }
         }
 
-        public static string GetGameUrl(GameType type, string serverGuid)
+        public static string GetGameUrl(GameType type, GamePlatformType platform, string serverGuid)
         {
             switch (type)
             {
                 case GameType.Battlefield3:
                     return String.Format("http://battlelog.battlefield.com/bf3/servers/show/pc/{0}", serverGuid);
                 case GameType.Battlefield4:
-                    return String.Format("http://battlelog.battlefield.com/bf4/servers/show/pc/{0}", serverGuid);
+                    switch (platform)
+                    {
+                        case GamePlatformType.PC:
+                            return String.Format("http://battlelog.battlefield.com/bf4/servers/show/pc/{0}", serverGuid);
+                        case GamePlatformType.XboxOne:
+                            return String.Format("http://battlelog.battlefield.com/bf4/servers/show/XBOXONE/{0}", serverGuid);
+                        default:
+                            return string.Empty;
+
+                    }
                 default:
                     return string.Empty;
             }
