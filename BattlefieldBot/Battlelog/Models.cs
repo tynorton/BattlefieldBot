@@ -1,7 +1,8 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using BattlefieldBot.Battlelog.Proxies;
-using SQLite;
+using LiteDB;
 
 namespace BattlefieldBot
 {
@@ -36,9 +37,10 @@ namespace BattlefieldBot
             this.IsPlaying = user.presence.isPlaying;
             this.ServerID = user.presence.serverGuid.ToString();
             this.GameType = (GamePlatformType) user.presence.game;
+            this.LastUpdated = DateTime.UtcNow;
         }
 
-        [Key]
+        [BsonId]
         public long UserID { get; set; }
 
         public string UserName { get; set; }
@@ -51,8 +53,11 @@ namespace BattlefieldBot
 
         public string ServerID { get; set; }
 
-        [Ignore]
+        [NotMapped]
         public virtual ServerDetail Server { get; private set; }
+
+        public DateTime LastUpdated { get; set; }
+        public DateTime LastSeen { get; set; }
     }
 
     public class ServerDetail
@@ -78,7 +83,7 @@ namespace BattlefieldBot
 
         public string Name { get; set; }
 
-        [Key]
+        [BsonId]
         public string ServerID { get; set; }
 
         public GameType GameType { get; set; }

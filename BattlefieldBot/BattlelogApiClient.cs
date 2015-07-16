@@ -11,8 +11,6 @@ namespace BattlefieldBot
 {
     public class BattlelogApiClient : MyWebClient
     {
-        HttpWebResponse response;
-
         public bool Login(string username, string password)
         {
             HttpWebResponse response;

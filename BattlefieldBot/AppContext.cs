@@ -1,17 +1,15 @@
 ﻿using System.Data.Entity;
 using System.Data.Entity.ModelConfiguration.Conventions;
-using SQLite;
 
 namespace BattlefieldBot
 {
     public class AppContext : DbContext
     {
+        public const string SQLITE_FILENAME = "BattlefieldBot.db";
+
         public AppContext()
         {
             Database.SetInitializer(new CreateDatabaseIfNotExists<AppContext>());
-
-            SQLiteConnection conn = new SQLiteConnection("App.sqlite");
-            conn.CreateTable<BattlelogUser>();
         }
 
         public DbSet<BattlelogUser> Users { get; set; }
