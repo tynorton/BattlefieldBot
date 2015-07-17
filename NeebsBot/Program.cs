@@ -44,49 +44,67 @@ namespace NeebsBot
 
             while (true)
             {
-                var updates = await Bot.GetUpdates(offset);
-                bool changed = false;
-                foreach (var update in updates)
+                try
                 {
-                    // Group Chats
-                    if (update.Message.Chat.GetType() == typeof(GroupChat) && !chatIds.Contains(update.Message.Chat.Id))
+                    var updates = await Bot.GetUpdates(offset);
+                    bool changed = false;
+                    foreach (var update in updates)
                     {
-                        chatIds.Add(update.Message.Chat.Id);
-                        changed = true;
-                    }
-
-                    // User Chats
-                    if (update.Message.Chat.GetType() == typeof (User))
-                    {
-                        var user = update.Message.Chat as User;
-                        if (update.Message.Text.Trim().Equals("subscribe", StringComparison.OrdinalIgnoreCase) && !chatIds.Contains(update.Message.Chat.Id))
+                        // Group Chats
+                        if (update.Message.Chat.GetType() == typeof (GroupChat) &&
+                            !chatIds.Contains(update.Message.Chat.Id))
                         {
-                            Console.WriteLine(string.Format("New Subscriber: {0} ({1}, ID: {2}", user.FirstName + " " + user.LastName, user.Username, update.Message.Chat.Id));
                             chatIds.Add(update.Message.Chat.Id);
                             changed = true;
-
-                            await Bot.SendTextMessage(update.Message.Chat.Id, "You have been subscribed to Neebs Gaming notifications!");
                         }
 
-                        if (update.Message.Text.Trim().Equals("unsubscribe", StringComparison.OrdinalIgnoreCase) && chatIds.Contains(update.Message.Chat.Id))
+                        // User Chats
+                        if (update.Message.Chat.GetType() == typeof (User))
                         {
-                            Console.WriteLine(string.Format("Removed Subscriber: {0} ({1}, ID: {2}", user.FirstName + " " + user.LastName, user.Username, update.Message.Chat.Id));
-                            chatIds.Remove(update.Message.Chat.Id);
-                            changed = true;
+                            var user = update.Message.Chat as User;
+                            if (update.Message.Text.Trim().Equals("subscribe", StringComparison.OrdinalIgnoreCase) &&
+                                !chatIds.Contains(update.Message.Chat.Id))
+                            {
+                                Console.WriteLine(string.Format("New Subscriber: {0} ({1}, ID: {2}",
+                                    user.FirstName + " " + user.LastName, user.Username, update.Message.Chat.Id));
+                                chatIds.Add(update.Message.Chat.Id);
+                                changed = true;
 
-                            await Bot.SendTextMessage(update.Message.Chat.Id, "You have been unsubscribed from Neebs Gaming notifications.");
+                                await
+                                    Bot.SendTextMessage(update.Message.Chat.Id,
+                                        "You have been subscribed to Neebs Gaming notifications!");
+                            }
+
+                            if (update.Message.Text.Trim().Equals("unsubscribe", StringComparison.OrdinalIgnoreCase) &&
+                                chatIds.Contains(update.Message.Chat.Id))
+                            {
+                                Console.WriteLine(string.Format("Removed Subscriber: {0} ({1}, ID: {2}",
+                                    user.FirstName + " " + user.LastName, user.Username, update.Message.Chat.Id));
+                                chatIds.Remove(update.Message.Chat.Id);
+                                changed = true;
+
+                                await
+                                    Bot.SendTextMessage(update.Message.Chat.Id,
+                                        "You have been unsubscribed from Neebs Gaming notifications.");
+                            }
                         }
+
+                        offset = update.Id + 1;
                     }
 
-                    offset = update.Id + 1;
-                }
+                    if (changed)
+                    {
+                        File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "subscribedchats.txt"),
+                            string.Join(",", chatIds));
+                    }
 
-                if (changed)
+                    await Task.Delay(1000);
+                }
+                catch (Exception ex)
                 {
-                    File.WriteAllText(Path.Combine(Environment.CurrentDirectory, "subscribedchats.txt"), string.Join(",", chatIds));
+                    // No nothing, just don't crash the app if service is down, or some unknown error.
+                    Console.WriteLine(ex.ToString());
                 }
-
-                await Task.Delay(1000);
             }
         }
 
