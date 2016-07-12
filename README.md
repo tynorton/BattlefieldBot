@@ -1,12 +1,11 @@
 ## Battlelog Status Notifier for Telegram
 
-C# library using Telegrams Bot API (https://core.telegram.org/bots/api)
+C# library using Telegram's Bot API (https://core.telegram.org/bots/api)
 Monitors Battlelog (https://battlelog.battlefield.com) for user status changes
 
 ## Directions
 
 * Install Telegram (https://telegram.org/), and create a bot by messaging @BotFather: https://core.telegram.org/bots#botfather
-* Register for a google api token @ https://console.developers.google.com
 
 Edit HiddenSetting.config, and add your telegram bot API token, and google developer api information.
 ```XML
